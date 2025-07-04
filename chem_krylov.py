@@ -34,6 +34,7 @@ def partially_filled_state(n_sites: int, n_electrons: int) -> List[str]:
 def get_ground_state(model: MolecularModel, n_electrons: int, max_bond: int) -> Tuple[MPS, float]:
     """Get the DMRG ground state of the molecular model."""
 
+    # TODO Different initial state?
     # product_state = ["up", "down"] * (len(model.lat.mps_sites()) // 2) # start in semi-Néel state 
     n_sites = len(model.lat.mps_sites())
     product_state = partially_filled_state(n_sites, n_electrons)
