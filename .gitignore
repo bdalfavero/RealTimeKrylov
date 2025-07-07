@@ -2,3 +2,4 @@
 data/*
 *.pkl
 tmp/*
+__pycache__/
