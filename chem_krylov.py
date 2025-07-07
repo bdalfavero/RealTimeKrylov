@@ -7,6 +7,7 @@ import json
 import pickle
 import numpy as np
 from scipy.linalg import eigh
+import pandas as pd
 import pyscf
 import tenpy as tp
 from tenpy.networks.mps import MPS
@@ -150,13 +151,15 @@ def threshold_eigenvalues(h: np.ndarray, s: np.ndarray, eps: float) -> Tuple[np.
     return new_h, new_s
 
 
-def krylov_energy_thresholded(H: np.ndarray, S: np.ndarray, eps: float) -> float:
+def krylov_energy_thresholded(H: np.ndarray, S: np.ndarray, eps: float) -> Tuple[np.ndarray, np.ndarray]:
     """Get the ground state energy by projecting the H and S matrices onto the space
     spanned by the eigenvectors of S, the associated eigenvalues of which are above some threshold
     value epsilon."""
 
+    ds = []
     energies = []
     for keep in range(1, S.shape[0]):
+        ds.append(keep)
         H0 = H[:keep, :keep]
         S0 = S[:keep, :keep]
         H_new, S_new = threshold_eigenvalues(H0, S0, eps)
@@ -164,7 +167,7 @@ def krylov_energy_thresholded(H: np.ndarray, S: np.ndarray, eps: float) -> float
         energy = np.min(eigvals)
         print(f"For dimension {keep} got energy {energy}.")
         energies.append(energy)
-    return np.min(energies)
+    return ds, energies
 
 
 def main():
@@ -195,12 +198,14 @@ def main():
     print(mol_model.lat.N_sites_per_ring)
 
     # Get ground state energy from DRMG.
-    max_bond = input_dict["chi"]
+    max_bond = input_dict["chi_dmrg"]
     n_electrons = input_dict["n_electrons"]
     ground_state, dmrg_energy = get_ground_state(mol_model, n_electrons, max_bond)
     print("DMRG energy =", dmrg_energy)
     with open('hf_ground_state.pkl', 'wb') as f:
         pickle.dump(ground_state, f)
+    # Give the state a larger bond dimension so that we can do more accurate TDVP.
+    ground_state.enlarge_chi([input_dict["chi_tdvp"] - max_bond] * len(mol_model.lat.mps_sites()))
 
     H, S = subspace_matrices(
         ground_state, mol_model,
@@ -214,12 +219,14 @@ def main():
 
     # Get energy with eigenvalue thresholding.
     # TODO Change me to a list of dimensions and energies, then convert to pandas.
-    krylov_thresholded_energy = krylov_energy_thresholded(H, S, input_dict["eps"])
+    ds, krylov_energies = krylov_energy_thresholded(H, S, input_dict["eps"])
+    df = pd.DataFrame.from_records(list(zip(ds, krylov_energies)), columns=["d", "energy"])
+    df.set_index("d", inplace=True)
 
     output_dict = {
         "input": input_dict,
         "dmrg_energy": dmrg_energy,
-        "kyrlov_energy": krylov_thresholded_energy
+        "kyrlov_energies": df.to_dict()
     }
     with open(args.output_file, 'w') as f:
         json.dump(output_dict, f)
