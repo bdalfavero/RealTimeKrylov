@@ -34,10 +34,11 @@ def partially_filled_state(n_sites: int, n_electrons: int) -> List[str]:
 def get_ground_state(model: MolecularModel, n_electrons: int, max_bond: int) -> Tuple[MPS, float]:
     """Get the DMRG ground state of the molecular model."""
 
-    # TODO Different initial state?
-    # product_state = ["up", "down"] * (len(model.lat.mps_sites()) // 2) # start in semi-Néel state 
+    product_state = ["up", "down"] * (len(model.lat.mps_sites()) // 2) # start in semi-Néel state 
     n_sites = len(model.lat.mps_sites())
-    product_state = partially_filled_state(n_sites, n_electrons)
+    if len(product_state) != n_sites:
+        product_state.append("up")
+    # product_state = partially_filled_state(n_sites, n_electrons)
     psi = tp.MPS.from_product_state(model.lat.mps_sites(), product_state)
     dmrg_params = {'mixer': True, 'trunc_params': {'chi_max': max_bond, 'svd_min': 1e-9},
         'max_E_err': 1e-9, 'max_S_err': 1e-6, 'min_sweeps': 20, 'max_sweeps': 50, 'max_trunc_err': None,
@@ -212,6 +213,7 @@ def main():
         pickle.dump(subspace_output, f)
 
     # Get energy with eigenvalue thresholding.
+    # TODO Change me to a list of dimensions and energies, then convert to pandas.
     krylov_thresholded_energy = krylov_energy_thresholded(H, S, input_dict["eps"])
 
     output_dict = {
