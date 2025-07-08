@@ -204,12 +204,14 @@ def main():
     print("DMRG energy =", dmrg_energy)
     with open('hf_ground_state.pkl', 'wb') as f:
         pickle.dump(ground_state, f)
-    # Give the state a larger bond dimension so that we can do more accurate TDVP.
-    ground_state.enlarge_chi([input_dict["chi_tdvp"] - max_bond] * len(mol_model.lat.mps_sites()))
+    # print("Enlarging MPS.")
+    # # Give the state a larger bond dimension so that we can do more accurate TDVP.
+    # ground_state.enlarge_chi([input_dict["chi_tdvp"] - max_bond] * len(mol_model.lat.mps_sites()) + [0])
 
+    print("Computing subspace matrices")
     H, S = subspace_matrices(
         ground_state, mol_model,
-        input_dict["chi"], input_dict["T"], input_dict["dt"]
+        input_dict["chi_tdvp"], input_dict["T"], input_dict["dt"]
     )
     subspace_output = {
         "H": H, "S": S
@@ -218,7 +220,6 @@ def main():
         pickle.dump(subspace_output, f)
 
     # Get energy with eigenvalue thresholding.
-    # TODO Change me to a list of dimensions and energies, then convert to pandas.
     ds, krylov_energies = krylov_energy_thresholded(H, S, input_dict["eps"])
     df = pd.DataFrame.from_records(list(zip(ds, krylov_energies)), columns=["d", "energy"])
     df.set_index("d", inplace=True)
