@@ -1,5 +1,5 @@
 """Compare Krylov and DMRG energies for the Hubbard model when the reference state
-for Krylov is a randomly-chosen MPS."""
+for Krylov is a randomly-chosen MPS. We want to reproduce the 'bond dimension wall'."""
 
 from typing import Tuple
 import json
@@ -178,8 +178,8 @@ def krylov_energy_thresholded(H: np.ndarray, S: np.ndarray, eps: float) -> Tuple
 def random_krylov(psi, Lx, Ly, chi, U, T, dt, eps):
 	"""Starting from a random state psi, get the Krylov energies and save them to a file."""
 
-	psi_large = psi.enlarge_chi([chi] * (Lx * Ly) + [0])
-	H, S = make_data(psi_large, Lx, Ly, chi, U, T, dt)
+	# psi_large = psi.enlarge_chi([chi] * (Lx * Ly) + [0])
+	H, S = make_data(psi.copy(), Lx, Ly, chi, U, T, dt)
 	ds, energies = krylov_energy_thresholded(H, S, eps) 
 	results = {
 		"chi": chi,
@@ -195,29 +195,30 @@ def main():
 	Lx, Ly = 4, 2
 	chidmrg = 16
 
-	# generate and save DMRG data for initial states at 3 different bond dimensions 
-	for chi in [chidmrg, 2 * chidmrg, 4 * chidmrg]:
-		E, psi = get_gnd_hubbard(Lx, Ly, chi, U=8, psi_init=None)
-		with open(f'data/gnd_chi{chi}.p', 'wb') as handle:
-			pickle.dump([E, psi], handle)
+	# generate and save DMRG data for initial state
+	E, psi = get_gnd_hubbard(Lx, Ly, chidmrg, U=8, psi_init=None)
+	with open(f'data/gnd_chi{chidmrg}.p', 'wb') as handle:
+		pickle.dump([E, psi], handle)
 	print("Done making DMRG data")
 
 	# generate a few bond dimensions to time evolve with
-	def bond_dims(n):
-		return [n + k*n//4 for k in range(5)]
-	chis = bond_dims(chidmrg) + bond_dims(2*chidmrg)[1:]
-	print("Time evolution bond dimensions: ", chis)
+	# def bond_dims(n):
+	# 	return [n + k*n//4 for k in range(5)]
+	# chis = bond_dims(chidmrg) + bond_dims(2*chidmrg)[1:]
+	# print("Time evolution bond dimensions: ", chis)
 
 	# Make a random state for Krylov
+	chi_tdvp = chidmrg
 	model_ref = HubbardSquare2D({'Lx': Lx, 'Ly': Ly, 'U':U, 'mu':0})
-	psi_random = MPS.from_desired_bond_dimension(model_ref.sites, chidmrg)
-	# Then try it with all the bond dimensions.
-	pool = ProcessPool(nodes=6)
+	sites = [model_ref.lat.site(i) for i in range(Lx * Ly)]
+	# psi_random = MPS.from_desired_bond_dimension(sites, chidmrg)
+	psi_random = MPS.from_random_unitary_evolution(sites, chi_tdvp, ["up"] * len(sites))
+
 	eps = 1e-8
 	dt = 1e-3
 	d = 10
 	T = d * dt
-	results = pool.map(lambda chi: random_krylov(psi_random, Lx, Ly, chi, U, T, dt, eps))
+	random_krylov(psi, Lx, Ly, chi_tdvp, U, T, dt, eps)
 
 if __name__ == '__main__':
 	main()
