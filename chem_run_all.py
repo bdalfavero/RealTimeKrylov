@@ -2,7 +2,7 @@ import json
 import subprocess
 from pathos.pools import ProcessPool
 
-chi_tdvp = [10, 15, 20, 25, 30, 35, 40, 45]
+chi_tdvp = [30, 35, 40, 45, 50, 55, 60]
 input_files = []
 for i, chi in enumerate(chi_tdvp):
     with open("data/hf_input.json", "r") as f:
