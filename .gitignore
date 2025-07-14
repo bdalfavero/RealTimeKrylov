@@ -3,3 +3,5 @@ data/*
 *.pkl
 tmp/*
 __pycache__/
+*.png
+*.pdf
