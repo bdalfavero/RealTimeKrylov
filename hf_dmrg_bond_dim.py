@@ -130,7 +130,7 @@ def main():
     mol_model = MolecularModel(params)
 
     # Do DMRG at a range of bond dimensions.
-    chi_dmrg = list(range(5, 30, 5))
+    chi_dmrg = list(range(20, 50, 5))
     pool = ProcessPool(nodes=8)
     results = pool.map(lambda chi: get_gnd_hf(mol_model, chi, psi_init=None), chi_dmrg)
     dmrg_energies = {chi: res[0] for chi, res in zip(chi_dmrg, results)}
