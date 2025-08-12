@@ -106,7 +106,7 @@ def main():
 
     # Get the dmrg ground state for each chi.
     print("Starting DMRG.")
-    chis = [4, 5, 6]
+    chis = [10, 20, 30]
     pool = ProcessPool(nodes=4)
     results = pool.map(lambda chi: get_gnd_hubbard(mol_model, chi), chis)
     dmrg_ground_states = {chi: result[1] for chi, result in zip(chis, results)}
