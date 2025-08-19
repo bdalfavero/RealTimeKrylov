@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 import pickle
 from joblib import Parallel, delayed # parallelize generation of data
 import pyscf
+from openfermion.chem import geometry_from_pubchem
 # TenPy Imports, TenPy Version 1.0.2
 import tenpy as tp
 from tenpy.models import CouplingMPOModel, NearestNeighborModel
@@ -175,8 +176,11 @@ def make_plots(chi_dmrg, chi_times):
 def main():
 	chidmrg = 24
 	# Get V_ijkl and h_ij for the HF molecule.
+	geometry = geometry_from_pubchem("water")
+	# geometry = 'H 0 0 0; F 0 0 1.1'
 	mol = pyscf.M(
-		atom = 'H 0 0 0; F 0 0 1.1',  # in Angstrom
+		# atom = 'H 0 0 0; F 0 0 1.1',  # in Angstrom
+		atom = geometry,  # in Angstrom
 		basis = 'ccpvdz',
 		symmetry = True,
 	)
