@@ -217,6 +217,7 @@ def main():
 	# Make plots of krylov energy estimates
 	make_plots(chi_dmrg=chidmrg, chi_times=chitimes)
 	plt.show()
+	plt.savefig("hf_krylov_results.pdf")
 
 if __name__ == '__main__':
 	main()
