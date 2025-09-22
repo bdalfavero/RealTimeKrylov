@@ -14,10 +14,12 @@ from tenpy.models.molecular import MolecularModel
 # Uncomment the line below if you want TenPy's intrinsic logging 
 tp.tools.misc.setup_logging(to_stdout="INFO")
 
-def get_gnd_mol(model, chi, psi_init=None):
+def get_gnd_mol(model, chi, n_occ: int, psi_init=None):
     # By default, start with a state that has half-filling (one electron per site)
     if psi_init is None:
-        product_state = ["up", "down"] * (len(model.lat.mps_sites()) // 2) # start in semi-Néel state 
+        # product_state = ["up", "down"] * (len(model.lat.mps_sites()) // 2) # start in semi-Néel state 
+        assert n_occ <= len(model.lat.mps_sites())
+        product_state = ["up"] * n_occ + ["down"] * (len(model.lat.mps_sites()) - n_occ)
         n_sites = len(model.lat.mps_sites())
         if len(product_state) != n_sites:
             product_state.append("up")
@@ -91,7 +93,7 @@ def main():
     mol_model = MolecularModel(params)
     print(mol_model.lat.N_sites_per_ring)
 
-    dmrg_energy, ground_state = get_gnd_mol(mol_model, chi_dmrg)
+    dmrg_energy, ground_state = get_gnd_mol(mol_model, chi_dmrg, 2)
     states = evolve_gnd(ground_state, mol_model, chi_tdvp, T=T, dt=dt)
     print(f"Final DMRG energy: {dmrg_energy}")
     print(f"Got {len(states)} states.")
