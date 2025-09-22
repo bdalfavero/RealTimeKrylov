@@ -177,7 +177,7 @@ def make_plots(chi_dmrg, chi_times):
 def main():
 	chidmrg = 24
 	# Get V_ijkl and h_ij for the HF molecule.
-	geometry = geometry_from_pubchem("water")
+	geometry = geometry_from_pubchem("hydrogen")
 	# geometry = 'H 0 0 0; F 0 0 1.1'
 	mol = pyscf.M(
 		# atom = 'H 0 0 0; F 0 0 1.1',  # in Angstrom
