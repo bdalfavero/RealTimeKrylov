@@ -15,49 +15,49 @@ from tenpy.models.molecular import MolecularModel
 tp.tools.misc.setup_logging(to_stdout="INFO")
 
 def get_gnd_mol(model, chi, psi_init=None):
-	# By default, start with a state that has half-filling (one electron per site)
-	if psi_init is None:
-		product_state = ["up", "down"] * (len(model.lat.mps_sites()) // 2) # start in semi-Néel state 
-		n_sites = len(model.lat.mps_sites())
-		if len(product_state) != n_sites:
-			product_state.append("up")
-		# product_state = ["up", "down"]  * (Lx * Ly // 2) # start in semi-Néel state 
-		psi = tp.MPS.from_product_state(model.lat.mps_sites(), product_state)
-	else:
-		psi = psi_init
+    # By default, start with a state that has half-filling (one electron per site)
+    if psi_init is None:
+        product_state = ["up", "down"] * (len(model.lat.mps_sites()) // 2) # start in semi-Néel state 
+        n_sites = len(model.lat.mps_sites())
+        if len(product_state) != n_sites:
+            product_state.append("up")
+        # product_state = ["up", "down"]  * (Lx * Ly // 2) # start in semi-Néel state 
+        psi = tp.MPS.from_product_state(model.lat.mps_sites(), product_state)
+    else:
+        psi = psi_init
 
-	# Set up DMRG parameters and precision (bond dimension beyond chi is truncated)
-	dmrg_params = {'mixer': True, 'trunc_params': {'chi_max': chi, 'svd_min': 1e-9},
-		'max_E_err': 1e-9, 'max_S_err': 1e-6, 'min_sweeps': 20, 'max_sweeps': 50, 'max_trunc_err': None,
-		'max_N_sites_per_ring': None}
-	engine = tp.TwoSiteDMRGEngine(psi, model, dmrg_params)
-	
-	# Run DMRG and return energy and ground state
-	E, psi = engine.run()
-	print(f"E = {E}")
-	
-	return (E, psi)
+    # Set up DMRG parameters and precision (bond dimension beyond chi is truncated)
+    dmrg_params = {'mixer': True, 'trunc_params': {'chi_max': chi, 'svd_min': 1e-9},
+        'max_E_err': 1e-9, 'max_S_err': 1e-6, 'min_sweeps': 20, 'max_sweeps': 50, 'max_trunc_err': None,
+        'max_N_sites_per_ring': None}
+    engine = tp.TwoSiteDMRGEngine(psi, model, dmrg_params)
+    
+    # Run DMRG and return energy and ground state
+    E, psi = engine.run()
+    print(f"E = {E}")
+    
+    return (E, psi)
 
 # Evolve a (ground) state "psi_gnd" using TDVP at fixed bond dimenion chi
 # Evolve from time 0 to time T in steps of dt
 # Returns tuple of energy and ground state
 def evolve_gnd(psi_gnd, model, chi, T=3, dt=0.2):
-	# parameters for each step of TDVP
-	num_steps = int(T / dt)
-	time_params = {'start_time': 0, 'dt': dt, 'N_steps': 1,
-		'trunc_params': {'chi_max': chi, 'svd_min': 1.e-10, 'trunc_cut': None}, 'max_N_sites_per_ring': None}
-	
-	# evolve the inputted state psi_gnd in place
-	engine = tp.TwoSiteTDVPEngine(psi_gnd, model, time_params)
+    # parameters for each step of TDVP
+    num_steps = int(T / dt)
+    time_params = {'start_time': 0, 'dt': dt, 'N_steps': 1,
+        'trunc_params': {'chi_max': chi, 'svd_min': 1.e-10, 'trunc_cut': None}, 'max_N_sites_per_ring': None}
+    
+    # evolve the inputted state psi_gnd in place
+    engine = tp.TwoSiteTDVPEngine(psi_gnd, model, time_params)
 
-	# Save a copy of the evolved state at each time step
-	states = [psi_gnd.copy()] # initial state at t = 0
-	for step in range(num_steps):
-		print(f"Time = {dt*step}")
-		engine.run()
-		states.append(psi_gnd.copy())
+    # Save a copy of the evolved state at each time step
+    states = [psi_gnd.copy()] # initial state at t = 0
+    for step in range(num_steps):
+        print(f"Time = {dt*step}")
+        engine.run()
+        states.append(psi_gnd.copy())
 
-	return states
+    return states
 
 
 def main():
@@ -93,16 +93,19 @@ def main():
 
     dmrg_energy, ground_state = get_gnd_mol(mol_model, chi_dmrg)
     states = evolve_gnd(ground_state, mol_model, chi_tdvp, T=T, dt=dt)
+    print(f"Final DMRG energy: {dmrg_energy}")
+    print(f"Got {len(states)} states.")
 
     output_dict = {
-		"input": input_dict,
-		"dmrg_energy": dmrg_energy,
-		"ground_state": ground_state,
-		"tdvp_states": states
+        "input": input_dict,
+        "dmrg_energy": dmrg_energy,
+        "ground_state": ground_state,
+        "tdvp_states": states,
+        "model_mpo": mol_model.H_MPO
     }
     with open(args.output_file, "wb") as f:
         pickle.dump(output_dict, f)
 
 
 if __name__ == "__main__":
-	main()
+    main()
