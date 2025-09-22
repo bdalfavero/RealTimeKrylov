@@ -88,6 +88,7 @@ def make_diff_timechi(psi_dmrg, model_ref, dt=0.2, T=3, chitimes=None):
 		N = len(states)
 		S, H = [np.zeros((N, N), dtype=complex) for _ in range(2)]
 
+		# TODO This can be optimized by <phi|U^(-k) U^l|phi> = <phi|U^(l-k)|phi>.
 		# fill off-diagonal elements with overlaps and hamiltonian expectation values
 		for i in range(N):
 			for j in range(i+1, N):
