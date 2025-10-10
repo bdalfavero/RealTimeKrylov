@@ -9,7 +9,6 @@ from quimb_tebd import (
     subspace_matrices, energy_vs_d, total_number_qubit_operator
 )
 
-
 def main():
     l = 2
     t = 1.0
@@ -18,11 +17,11 @@ def main():
     max_mpo_bond = 100
     tau = 0.2
     steps = 3
-    d = 10
+    d = 20
     eps = 1e-8
     alpha = 10.
 
-    hamiltonian = of.hamiltonians.fermi_hubbard(l, l, t, u)
+    hamiltonian = of.hamiltonians.fermi_hubbard(l, l+1, t, u)
     hamiltonian_qubop = of.transforms.jordan_wigner(hamiltonian)
     hamiltonian_cirq = of.transforms.qubit_operator_to_pauli_sum(hamiltonian_qubop)
     qs = hamiltonian_cirq.qubits
@@ -55,7 +54,7 @@ def main():
     ev_ckt_transpiled = qiskit.transpile(ev_circuit, basis_gates=["u3", "cx"])
     tebd_bond_dims = dmrg_bond_dims
     tebd_energies = np.zeros((len(tebd_bond_dims), d-1), dtype=float)
-    eta = [1e-4, 1e-4, 1e-7, 1e-8]
+    eta = [1e-12, 1e-12, 1e-12, 1e-12]
     for i, chi_tebd in enumerate(tebd_bond_dims):
         h, s = subspace_matrices(
             hamiltonian_mpo, dmrg_ground_states[min(dmrg_bond_dims)], ev_ckt_transpiled,

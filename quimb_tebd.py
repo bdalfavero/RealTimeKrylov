@@ -206,6 +206,8 @@ def fill_subspace_matrices(
             else: # i < j
                 h[i, j] = mat_elems[j - i].conjugate()
                 s[i, j] = overlaps[j - i].conjugate()
+    # print("||H - H^dag|| =", la.norm(h - h.conj().T))
+    # print("||S - S^dag|| =", la.norm(s - s.conj().T))
     return h, s
 
 
@@ -279,6 +281,8 @@ def energy_vs_d(
         else:
             new_h = h_d.copy()
             new_s = s_d + kwargs["eta"] * np.eye(s_d.shape[0])
-        eigvals, _ = la.eig(new_h, new_s)
-        energies.append(np.min(eigvals).real)
+        eigvals, eigvecs = la.eig(new_h, new_s)
+        i_min = np.argmin(eigvals.real)
+        # print(eigvecs[:, i_min].conj().T @ eigvecs[:, i_min])
+        energies.append(eigvals[i_min].real)
     return energies
