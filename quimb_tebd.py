@@ -297,6 +297,8 @@ def subspace_matrices(
             )
             overlaps.append(overlap)
             mat_elems.append(mat_elem)
+        print("overlaps =\n", overlaps)
+        print("mat_elems =\n", mat_elems)
         h, s = fill_subspace_matrices_toeplitz(mat_elems, overlaps)
     else:
         states = get_evolved_states(ev_circuit, reference_state, d, max_bond)
