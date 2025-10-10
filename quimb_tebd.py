@@ -179,6 +179,7 @@ def tebd_matrix_element_and_overlap(
                 qasm_str, psi0=reference_mps, max_bond=max_circuit_bond, progbar=False
             )
         evolved_mps = circuit_mps.psi
+    evolved_mps.normalize()
     # Build tensor networks for <psi| U^d |psi> and <psi| H U^d |psi>
     overlap = reference_mps.H @ evolved_mps
     mat_elem = reference_mps.H @ ham_mpo.apply(evolved_mps)
@@ -256,16 +257,28 @@ def threshold_eigenvalues(h: np.ndarray, s: np.ndarray, eps: float, verbose: boo
     return new_h, new_s
 
 
-def energy_vs_d(h: np.ndarray, s: np.ndarray, eps: float) -> np.ndarray:
+def energy_vs_d(
+    h: np.ndarray, s: np.ndarray,
+    method: str = "threshold", **kwargs
+) -> np.ndarray:
     """Get energy from H, S for each dimension up to the total size d of the subspace."""
 
     assert h.shape == s.shape
+    assert method in ["threshold", "identity"]
+    if method == "threshold":
+        assert "eps" in kwargs
+    if method == "identity":
+        assert "eta" in kwargs
 
     energies = []
     for d in range(1, h.shape[0]):
         h_d = h[:d, :d]
         s_d = s[:d, :d]
-        new_h, new_s = threshold_eigenvalues(h_d, s_d, eps)
+        if method == "threshold":
+            new_h, new_s = threshold_eigenvalues(h_d, s_d, kwargs["eps"])
+        else:
+            new_h = h_d.copy()
+            new_s = s_d + kwargs["eta"] * np.eye(s_d.shape[0])
         eigvals, _ = la.eig(new_h, new_s)
         energies.append(np.min(eigvals).real)
     return energies
