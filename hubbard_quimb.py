@@ -17,11 +17,11 @@ def main():
     max_mpo_bond = 100
     tau = 0.2
     steps = 3
-    d = 20
+    d = 10
     eps = 1e-8
     alpha = 10.
 
-    hamiltonian = of.hamiltonians.fermi_hubbard(l, l+1, t, u)
+    hamiltonian = of.hamiltonians.fermi_hubbard(l, l, t, u)
     hamiltonian_qubop = of.transforms.jordan_wigner(hamiltonian)
     hamiltonian_cirq = of.transforms.qubit_operator_to_pauli_sum(hamiltonian_qubop)
     qs = hamiltonian_cirq.qubits
@@ -58,7 +58,7 @@ def main():
     for i, chi_tebd in enumerate(tebd_bond_dims):
         h, s = subspace_matrices(
             hamiltonian_mpo, dmrg_ground_states[min(dmrg_bond_dims)], ev_ckt_transpiled,
-            chi_tebd, d
+            chi_tebd, d, method="full"
         )
         energies = energy_vs_d(h, s, method="threshold", eps=eta[i])
         print(f"chi={chi_tebd} got energies\n", energies)

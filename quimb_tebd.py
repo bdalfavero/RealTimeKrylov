@@ -149,6 +149,42 @@ def trotter_circuit_from_psum(hamiltonian: cirq.PauliSum, t: float, steps: int) 
     return ev_ckt_qiskit
 
 
+def get_evolved_states(
+    evolution_circuit: qiskit.QuantumCircuit,
+    reference_mps: MatrixProductState,
+    d: int,
+    max_circuit_bond: int,
+    backend_callback=None
+) -> List[MatrixProductState]:
+    """Get a list of d evolved states."""
+
+    states: List[MatrixProductState] = []
+    for i in range(d):
+        if i == 0:
+            evolved_mps = reference_mps.copy()
+        else:
+            # Make a circuit with d repetitions of the evolution circuit.
+            nq = evolution_circuit.num_qubits
+            total_circuit = qiskit.QuantumCircuit(nq)
+            for _ in range(i):
+                total_circuit = total_circuit.compose(evolution_circuit)
+            # Convert the circuit to quimb format.
+            qasm_str = dumps(total_circuit)
+            if backend_callback is not None:
+                circuit_mps = qtn.circuit.CircuitMPS.from_openqasm2_str(
+                    qasm_str, psi0=reference_mps, max_bond=max_circuit_bond, progbar=False,
+                    to_backend=backend_callback
+                )
+            else:
+                circuit_mps = qtn.circuit.CircuitMPS.from_openqasm2_str(
+                    qasm_str, psi0=reference_mps, max_bond=max_circuit_bond, progbar=False
+                )
+            evolved_mps = circuit_mps.psi
+        evolved_mps.normalize()
+        states.append(evolved_mps.copy())
+    return states
+
+
 def tebd_matrix_element_and_overlap(
     ham_mpo: MatrixProductOperator,
     evolution_circuit: qiskit.QuantumCircuit,
@@ -186,7 +222,7 @@ def tebd_matrix_element_and_overlap(
     return (mat_elem, overlap)
 
 
-def fill_subspace_matrices(
+def fill_subspace_matrices_toeplitz(
     mat_elems: List[complex], overlaps: List[complex]
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Fill subspace matrices from the computed matrix elements and overlaps."""
@@ -211,25 +247,60 @@ def fill_subspace_matrices(
     return h, s
 
 
+def fill_subspace_matrices_state(
+    states: List[MatrixProductState],
+    hamiltonian_mpo: MatrixProductOperator
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Fill the matrices form the list of states."""
+
+    N = len(states)
+    S, H = [np.zeros((N, N), dtype=complex) for _ in range(2)]
+
+    # fill off-diagonal elements with overlaps and hamiltonian expectation values
+    for i in range(N):
+        for j in range(i+1, N):
+            # S[i, j] = states[i].overlap(states[j]) # < vi | vj >
+            # H[i, j] = tp.MPOEnvironment(states[i], model_ref.H_MPO, states[j]).full_contraction(0) # < vi | H | vj >
+            S[i, j] = states[i].H @ states[j]
+            H[i, j] = states[i].H @ hamiltonian_mpo.apply(states[j])
+    H += H.conj().T
+    S += S.conj().T
+
+    # fill diagonal elements 
+    for i in range(N):
+        # S[i, i] = states[i].overlap(states[i]).real
+        # H[i, i] = model_ref.H_MPO.expectation_value(states[i]).real
+        S[i, i] = states[i].H @ states[i]
+        H[i, i] = states[i].H @ hamiltonian_mpo.apply(states[i])
+    return (H, S)
+
+
 def subspace_matrices(
     ham_mpo: MatrixProductOperator,
     reference_state: MatrixProductState,
     ev_circuit: qiskit.QuantumCircuit,
     max_bond: int,
-    d: int
+    d: int,
+    method: str = "Toeplitz"
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Get H and S given the reference and the circuit."""
 
-    overlaps = []
-    mat_elems = []
-    for dd in range(d):
-        mat_elem, overlap = tebd_matrix_element_and_overlap(
-            ham_mpo, ev_circuit, reference_state,
-            dd, max_bond, backend_callback=None
-        )
-        overlaps.append(overlap)
-        mat_elems.append(mat_elem)
-    h, s = fill_subspace_matrices(mat_elems, overlaps)
+    assert method in ["Toeplitz", "full"]
+
+    if method == "Toeplitz":
+        overlaps = []
+        mat_elems = []
+        for dd in range(d):
+            mat_elem, overlap = tebd_matrix_element_and_overlap(
+                ham_mpo, ev_circuit, reference_state,
+                dd, max_bond, backend_callback=None
+            )
+            overlaps.append(overlap)
+            mat_elems.append(mat_elem)
+        h, s = fill_subspace_matrices_toeplitz(mat_elems, overlaps)
+    else:
+        states = get_evolved_states(ev_circuit, reference_state, d, max_bond)
+        h, s = fill_subspace_matrices_state(states, ham_mpo)
     return (h, s)
 
 
