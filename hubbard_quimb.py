@@ -17,7 +17,7 @@ def main():
     max_mpo_bond = 100
     tau = 0.2
     steps = 3
-    d = 10
+    d = 15
     eps = 1e-8
     alpha = 10.
 
