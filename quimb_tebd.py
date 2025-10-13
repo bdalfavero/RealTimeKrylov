@@ -232,18 +232,17 @@ def fill_subspace_matrices_toeplitz(
     h = np.zeros((d, d), dtype=complex)
     s = np.zeros((d, d), dtype=complex)
     for i in range(d): # Loop over rows.
-        for j in range(d):
-            if i == j:
-                h[i, i] = mat_elems[0]
-                s[i, i] = overlaps[0]
-            elif i > j:
-                h[i, j] = mat_elems[i - j]
-                s[i, j] = overlaps[i - j]
-            else: # i < j
-                h[i, j] = mat_elems[j - i].conjugate()
-                s[i, j] = overlaps[j - i].conjugate()
-    # print("||H - H^dag|| =", la.norm(h - h.conj().T))
-    # print("||S - S^dag|| =", la.norm(s - s.conj().T))
+        for j in range(i+1, d):
+            h[i, j] = mat_elems[j - i]
+            s[i, j] = overlaps[j - i]
+    h += h.conj().T
+    s += s.conj().T
+    for i in range(d):
+        h[i, i] = mat_elems[0]
+        s[i, i] = overlaps[0]
+    print("In Toeplitz")
+    print("||H - H^dag|| =", la.norm(h - h.conj().T))
+    print("||S - S^dag|| =", la.norm(s - s.conj().T))
     return h, s
 
 
@@ -272,6 +271,9 @@ def fill_subspace_matrices_state(
         # H[i, i] = model_ref.H_MPO.expectation_value(states[i]).real
         S[i, i] = states[i].H @ states[i]
         H[i, i] = states[i].H @ hamiltonian_mpo.apply(states[i])
+    print("In state-based")
+    print("||H - H^dag|| =", la.norm(H - H.conj().T))
+    print("||S - S^dag|| =", la.norm(S - S.conj().T))
     return (H, S)
 
 

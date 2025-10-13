@@ -47,8 +47,12 @@ def main():
         hamiltonian_mpo, ground_state, ev_ckt_transpiled,
         chi_tebd, d, method="Toeplitz"
     )
-    print(la.norm(h_full - h_toep))
-    print(la.norm(s_full - s_toep))
+    print("Norm differences:")
+    print("H:", la.norm(h_full - h_toep))
+    print("S:", la.norm(s_full - s_toep))
+    print("Max element difference:")
+    print("H:", np.max(h_full - h_toep))
+    print("S:", np.max(s_full - s_toep))
     breakpoint()
 
 if __name__ == "__main__":
