@@ -240,9 +240,9 @@ def fill_subspace_matrices_toeplitz(
     for i in range(d):
         h[i, i] = mat_elems[0]
         s[i, i] = overlaps[0]
-    print("In Toeplitz")
-    print("||H - H^dag|| =", la.norm(h - h.conj().T))
-    print("||S - S^dag|| =", la.norm(s - s.conj().T))
+    # print("In Toeplitz")
+    # print("||H - H^dag|| =", la.norm(h - h.conj().T))
+    # print("||S - S^dag|| =", la.norm(s - s.conj().T))
     return h, s
 
 
@@ -271,9 +271,9 @@ def fill_subspace_matrices_state(
         # H[i, i] = model_ref.H_MPO.expectation_value(states[i]).real
         S[i, i] = states[i].H @ states[i]
         H[i, i] = states[i].H @ hamiltonian_mpo.apply(states[i])
-    print("In state-based")
-    print("||H - H^dag|| =", la.norm(H - H.conj().T))
-    print("||S - S^dag|| =", la.norm(S - S.conj().T))
+    # print("In state-based")
+    # print("||H - H^dag|| =", la.norm(H - H.conj().T))
+    # print("||S - S^dag|| =", la.norm(S - S.conj().T))
     return (H, S)
 
 
@@ -299,8 +299,8 @@ def subspace_matrices(
             )
             overlaps.append(overlap)
             mat_elems.append(mat_elem)
-        print("overlaps =\n", overlaps)
-        print("mat_elems =\n", mat_elems)
+        # print("overlaps =\n", overlaps)
+        # print("mat_elems =\n", mat_elems)
         h, s = fill_subspace_matrices_toeplitz(mat_elems, overlaps)
     else:
         states = get_evolved_states(ev_circuit, reference_state, d, max_bond)
