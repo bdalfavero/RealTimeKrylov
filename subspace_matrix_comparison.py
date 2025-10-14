@@ -30,30 +30,37 @@ def main():
     total_number = total_number_qubit_operator(len(qs))
     augment_term = alpha * (total_number - n_elec) ** 2
     ham_augmented = hamiltonian_qubop + augment_term
+    ham_augmented_cirq = of.transforms.qubit_operator_to_pauli_sum(ham_augmented)
+    ham_augmented_mpo = pauli_sum_to_mpo(ham_augmented_cirq, qs, max_mpo_bond)
 
     chi_dmrg = 5
     ground_state, energy, occupation = get_drmg_ground_state(
-        hamiltonian_mpo, n_elec, chi_dmrg, alpha=alpha
+        ham_augmented_mpo, n_elec, chi_dmrg, alpha=alpha
     )
 
-    ev_circuit = trotter_circuit_from_psum(hamiltonian_cirq, tau, steps)
-    ev_ckt_transpiled = qiskit.transpile(ev_circuit, basis_gates=["u3", "cx"])
-    chi_tebd=5
-    h_full, s_full = subspace_matrices(
-        hamiltonian_mpo, ground_state, ev_ckt_transpiled,
-        chi_tebd, d, method="full"
-    )
-    h_toep, s_toep = subspace_matrices(
-        hamiltonian_mpo, ground_state, ev_ckt_transpiled,
-        chi_tebd, d, method="Toeplitz"
-    )
-    print("Norm differences:")
-    print("H:", la.norm(h_full - h_toep))
-    print("S:", la.norm(s_full - s_toep))
-    print("Max element difference:")
-    print("H:", np.max(h_full - h_toep))
-    print("S:", np.max(s_full - s_toep))
-    breakpoint()
+    step_vals = np.logspace(0, 4, num=4)
+    h_errs = np.zeros((step_vals.size,), dtype=float)
+    s_errs = np.zeros((step_vals.size,), dtype=float)
+    for i, steps in enumerate(step_vals):
+        ev_circuit = trotter_circuit_from_psum(hamiltonian_cirq, tau, int(steps))
+        ev_ckt_transpiled = qiskit.transpile(ev_circuit, basis_gates=["u3", "cx"])
+        chi_tebd=5
+        h_full, s_full = subspace_matrices(
+            hamiltonian_mpo, ground_state, ev_ckt_transpiled,
+            chi_tebd, d, method="full"
+        )
+        h_toep, s_toep = subspace_matrices(
+            hamiltonian_mpo, ground_state, ev_ckt_transpiled,
+            chi_tebd, d, method="Toeplitz"
+        )
+        h_errs[i] = la.norm(h_full - h_toep)
+        s_errs[i] = la.norm(s_full - s_toep)
+    
+    f = h5py.File("data/subspace_errors.hdf5", "w")
+    f.create_dataset("steps", data=step_vals)
+    f.create_dataset("h_errs", data=h_errs)
+    f.create_dataset("s_errs", data=s_errs)
+    f.close()
 
 if __name__ == "__main__":
     main()
