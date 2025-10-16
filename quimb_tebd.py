@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import numpy as np
 import scipy.linalg as la
 import quimb.tensor as qtn
@@ -185,6 +185,24 @@ def get_evolved_states(
     return states
 
 
+def exact_evolved_states(
+    evolution_circuit: qiskit.QuantumCircuit,
+    reference_state: np.ndarray,
+    d: int,
+) -> List[np.ndarray]:
+    """Compute <psi|HU^d|psi> and <psi|U^d|psi> using matrix multiplication"""
+
+    # gate = evolution_circuit.to_gate()
+    # u = gate.to_matrix()
+    states = []
+    u = qiskit.quantum_info.Operator(evolution_circuit).data
+    evolved_state = reference_state.copy()
+    for _ in range(d):
+        evolved_state = u @ evolved_state
+        states.append(evolved_state.copy())
+    return states
+
+
 def tebd_matrix_element_and_overlap(
     ham_mpo: MatrixProductOperator,
     evolution_circuit: qiskit.QuantumCircuit,
@@ -301,13 +319,42 @@ def fill_subspace_matrices_state(
     return (H, S)
 
 
+def fill_subspace_matrices_vectors(
+    states: List[np.ndarray],
+    ham: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Fill the matrices form the list of states."""
+
+    N = len(states)
+    S, H = [np.zeros((N, N), dtype=complex) for _ in range(2)]
+
+    # fill off-diagonal elements with overlaps and hamiltonian expectation values
+    for i in range(N):
+        for j in range(i+1, N):
+            # S[i, j] = states[i].H @ states[j]
+            # H[i, j] = states[i].H @ hamiltonian_mpo.apply(states[j])
+            S[i, j] = np.vdot(states[i], states[j])
+            H[i, j] = np.vdot(states[i], ham @ states[j])
+    H += H.conj().T
+    S += S.conj().T
+
+    # fill diagonal elements 
+    for i in range(N):
+        # S[i, i] = states[i].H @ states[i]
+        # H[i, i] = states[i].H @ hamiltonian_mpo.apply(states[i])
+        S[i, j] = np.vdot(states[i], states[i])
+        H[i, j] = np.vdot(states[i], ham @ states[i])
+    return (H, S)
+
+
 def subspace_matrices(
-    ham_mpo: MatrixProductOperator,
-    reference_state: MatrixProductState,
+    ham: Union[MatrixProductOperator, np.ndarray],
+    reference_state: Union[MatrixProductState, np.ndarray],
     ev_circuit: qiskit.QuantumCircuit,
     max_bond: int,
     d: int,
-    method: str = "Toeplitz"
+    method: str = "Toeplitz",
+    exact: bool = False
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Get H and S given the reference and the circuit."""
 
@@ -317,18 +364,28 @@ def subspace_matrices(
         overlaps = []
         mat_elems = []
         for dd in range(d):
-            mat_elem, overlap = exact_matrix_element_and_overlap(
-                ham_mpo, ev_circuit, reference_state,
-                dd #, max_bond, backend_callback=None
-            )
+            if exact:
+                mat_elem, overlap = exact_matrix_element_and_overlap(
+                    ham, ev_circuit, reference_state,
+                    dd #, max_bond, backend_callback=None
+                )
+            else:
+                mat_elem, overlap = tebd_matrix_element_and_overlap(
+                    ham, ev_circuit, reference_state,
+                    d, max_bond, None
+                )
             overlaps.append(overlap)
             mat_elems.append(mat_elem)
         # print("overlaps =\n", overlaps)
         # print("mat_elems =\n", mat_elems)
         h, s = fill_subspace_matrices_toeplitz(mat_elems, overlaps)
     else:
-        states = get_evolved_states(ev_circuit, reference_state, d, max_bond)
-        h, s = fill_subspace_matrices_state(states, ham_mpo)
+        if exact:
+            states = exact_evolved_states(ev_circuit, reference_state, d)
+            h, s = fill_subspace_matrices_vectors(states, ham)
+        else:
+            states = get_evolved_states(ev_circuit, reference_state, d, max_bond, None)
+            h, s = fill_subspace_matrices_state(states, ham)
     return (h, s)
 
 
