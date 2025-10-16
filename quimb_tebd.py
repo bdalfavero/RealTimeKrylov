@@ -222,6 +222,25 @@ def tebd_matrix_element_and_overlap(
     return (mat_elem, overlap)
 
 
+def exact_matrix_element_and_overlap(
+    ham_matrix: np.ndarray,
+    evolution_circuit: qiskit.QuantumCircuit,
+    reference_state: np.ndarray,
+    d: int,
+) -> Tuple[complex, complex]:
+    """Compute <psi|HU^d|psi> and <psi|U^d|psi> using matrix multiplication"""
+
+    # gate = evolution_circuit.to_gate()
+    # u = gate.to_matrix()
+    u = qiskit.quantum_info.Operator(evolution_circuit).data
+    evolved_state = reference_state.copy()
+    for _ in range(d):
+        evolved_state = u @ evolved_state
+    overlap = np.vdot(reference_state, evolved_state)
+    mat_elem = np.vdot(reference_state, ham_matrix @ evolved_state)
+    return (mat_elem, overlap)
+
+
 def fill_subspace_matrices_toeplitz(
     mat_elems: List[complex], overlaps: List[complex]
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -231,18 +250,23 @@ def fill_subspace_matrices_toeplitz(
     d = len(mat_elems)
     h = np.zeros((d, d), dtype=complex)
     s = np.zeros((d, d), dtype=complex)
-    for i in range(d): # Loop over rows.
-        for j in range(i+1, d):
-            h[i, j] = mat_elems[j - i]
-            s[i, j] = overlaps[j - i]
-    h += h.conj().T
-    s += s.conj().T
+    # for i in range(d): # Loop over rows.
+    #     for j in range(i+1, d):
+    #         h[i, j] = mat_elems[j - i]
+    #         s[i, j] = overlaps[j - i]
+    # h += h.conj().T
+    # s += s.conj().T
+    # for i in range(d):
+    #     h[i, i] = mat_elems[0]
+    #     s[i, i] = overlaps[0]
     for i in range(d):
-        h[i, i] = mat_elems[0]
-        s[i, i] = overlaps[0]
-    # print("In Toeplitz")
-    # print("||H - H^dag|| =", la.norm(h - h.conj().T))
-    # print("||S - S^dag|| =", la.norm(s - s.conj().T))
+        for j in range(d):
+            if i >= j:
+                h[j, i] = mat_elems[i-j]
+                s[j, i] = overlaps[i-j]
+            else:
+                h[j, i] = mat_elems[j-i].conj()
+                s[j, i] = overlaps[j-i].conj()
     return h, s
 
 
@@ -293,9 +317,9 @@ def subspace_matrices(
         overlaps = []
         mat_elems = []
         for dd in range(d):
-            mat_elem, overlap = tebd_matrix_element_and_overlap(
+            mat_elem, overlap = exact_matrix_element_and_overlap(
                 ham_mpo, ev_circuit, reference_state,
-                dd, max_bond, backend_callback=None
+                dd #, max_bond, backend_callback=None
             )
             overlaps.append(overlap)
             mat_elems.append(mat_elem)

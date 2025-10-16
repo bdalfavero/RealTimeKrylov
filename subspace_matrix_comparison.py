@@ -38,42 +38,51 @@ def main():
         ham_augmented_mpo, n_elec, chi_dmrg, alpha=alpha
     )
 
-    step_vals = np.logspace(0, 4, num=4)
-    h_errs = np.zeros((step_vals.size,), dtype=float)
-    s_errs = np.zeros((step_vals.size,), dtype=float)
-    all_h_toep = np.zeros((d, d, step_vals.size), dtype=complex)
-    all_h_non_toep = np.zeros((d, d, step_vals.size), dtype=complex)
-    all_s_toep = np.zeros((d, d, step_vals.size), dtype=complex)
-    all_s_non_toep = np.zeros((d, d, step_vals.size), dtype=complex)
-    for i, steps in enumerate(step_vals):
-        print(f"On {i} out of {len(step_vals)}")
-        ev_circuit = trotter_circuit_from_psum(hamiltonian_cirq, tau, int(steps))
-        ev_ckt_transpiled = qiskit.transpile(ev_circuit, basis_gates=["u3", "cx"])
-        chi_tebd=5
-        h_full, s_full = subspace_matrices(
-            hamiltonian_mpo, ground_state, ev_ckt_transpiled,
-            chi_tebd, d, method="full"
-        )
-        h_toep, s_toep = subspace_matrices(
-            hamiltonian_mpo, ground_state, ev_ckt_transpiled,
-            chi_tebd, d, method="Toeplitz"
-        )
-        h_errs[i] = la.norm(h_full - h_toep)
-        s_errs[i] = la.norm(s_full - s_toep)
-        all_h_toep[:, :, i] = h_toep
-        all_h_non_toep[:, :, i] = h_full
-        all_s_toep[:, :, i] = s_toep
-        all_s_non_toep[:, :, i] = s_full
+    h_full, s_full = subspace_matrices(
+        hamiltonian_mpo, ground_state, ev_ckt_transpiled,
+        chi_tebd, d, method="full"
+    )
+    h_toep, s_toep = subspace_matrices(
+        hamiltonian_mpo, ground_state, ev_ckt_transpiled,
+        chi_tebd, d, method="Toeplitz"
+    )
+
+    # step_vals = np.logspace(0, 4, num=4)
+    # h_errs = np.zeros((step_vals.size,), dtype=float)
+    # s_errs = np.zeros((step_vals.size,), dtype=float)
+    # all_h_toep = np.zeros((d, d, step_vals.size), dtype=complex)
+    # all_h_non_toep = np.zeros((d, d, step_vals.size), dtype=complex)
+    # all_s_toep = np.zeros((d, d, step_vals.size), dtype=complex)
+    # all_s_non_toep = np.zeros((d, d, step_vals.size), dtype=complex)
+    # for i, steps in enumerate(step_vals):
+    #     print(f"On {i} out of {len(step_vals)}")
+    #     ev_circuit = trotter_circuit_from_psum(hamiltonian_cirq, tau, int(steps))
+    #     ev_ckt_transpiled = qiskit.transpile(ev_circuit, basis_gates=["u3", "cx"])
+    #     chi_tebd=5
+    #     h_full, s_full = subspace_matrices(
+    #         hamiltonian_mpo, ground_state, ev_ckt_transpiled,
+    #         chi_tebd, d, method="full"
+    #     )
+    #     h_toep, s_toep = subspace_matrices(
+    #         hamiltonian_mpo, ground_state, ev_ckt_transpiled,
+    #         chi_tebd, d, method="Toeplitz"
+    #     )
+    #     h_errs[i] = la.norm(h_full - h_toep)
+    #     s_errs[i] = la.norm(s_full - s_toep)
+    #     all_h_toep[:, :, i] = h_toep
+    #     all_h_non_toep[:, :, i] = h_full
+    #     all_s_toep[:, :, i] = s_toep
+    #     all_s_non_toep[:, :, i] = s_full
     
-    f = h5py.File("data/subspace_errors.hdf5", "w")
-    f.create_dataset("steps", data=step_vals)
-    f.create_dataset("h_errs", data=h_errs)
-    f.create_dataset("s_errs", data=s_errs)
-    f.create_dataset("all_h_toep", data=all_h_toep)
-    f.create_dataset("all_h_non_toep", data=all_h_non_toep)
-    f.create_dataset("all_s_toep", data=all_s_toep)
-    f.create_dataset("all_s_non_toep", data=all_s_non_toep)
-    f.close()
+    # f = h5py.File("data/subspace_errors.hdf5", "w")
+    # f.create_dataset("steps", data=step_vals)
+    # f.create_dataset("h_errs", data=h_errs)
+    # f.create_dataset("s_errs", data=s_errs)
+    # f.create_dataset("all_h_toep", data=all_h_toep)
+    # f.create_dataset("all_h_non_toep", data=all_h_non_toep)
+    # f.create_dataset("all_s_toep", data=all_s_toep)
+    # f.create_dataset("all_s_non_toep", data=all_s_non_toep)
+    # f.close()
 
 if __name__ == "__main__":
     main()

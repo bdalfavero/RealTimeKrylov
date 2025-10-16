@@ -1,5 +1,6 @@
 from typing import Dict, List
 import h5py
+from math import sqrt
 import numpy as np
 from scipy.sparse.linalg import eigsh
 import openfermion as of
@@ -26,14 +27,16 @@ def main():
     hamiltonian_cirq = of.transforms.qubit_operator_to_pauli_sum(hamiltonian_qubop)
     qs = hamiltonian_cirq.qubits
     hamiltonian_mpo = pauli_sum_to_mpo(hamiltonian_cirq, qs, max_mpo_bond)
+    ham_matrix = hamiltonian_cirq.matrix(qs)
 
     # Get exact energy (if the Hamilonian is small!)
     total_number = total_number_qubit_operator(len(qs))
     augment_term = alpha * (total_number - n_elec) ** 2
     ham_augmented = hamiltonian_qubop + augment_term
     ham_aug_sparse = of.linalg.get_sparse_operator(ham_augmented)
-    eigvals, _ = eigsh(ham_aug_sparse, which="SA")
+    eigvals, eigvecs = eigsh(ham_aug_sparse, which="SA")
     energy_exact = np.min(eigvals)
+    exact_ground_state = eigvecs[:, np.argmin(eigvals.real)]
     print(f"Exact energy = {energy_exact}")
 
     # DMRG energies
@@ -54,11 +57,17 @@ def main():
     ev_ckt_transpiled = qiskit.transpile(ev_circuit, basis_gates=["u3", "cx"])
     tebd_bond_dims = dmrg_bond_dims
     tebd_energies = np.zeros((len(tebd_bond_dims), d-1), dtype=float)
-    eta = [1e-12, 1e-12, 1e-12, 1e-12]
+    eta = [1e-6, 1e-12, 1e-12, 1e-12]
+    ptb_state = np.zeros((2 ** len(qs),), dtype=complex)
+    idx = (1 << n_elec) - 1
+    ptb_state[idx] = 1.0
+    breakpoint()
+    r = 1e-2
+    ref_state = sqrt(1 - r) * exact_ground_state + sqrt(r) * ptb_state
     for i, chi_tebd in enumerate(tebd_bond_dims):
         h, s = subspace_matrices(
-            hamiltonian_mpo, dmrg_ground_states[min(dmrg_bond_dims)], ev_ckt_transpiled,
-            chi_tebd, d, method="full"
+            ham_matrix, ref_state, ev_ckt_transpiled,
+            chi_tebd, d, method="Toeplitz"
         )
         energies = energy_vs_d(h, s, method="threshold", eps=eta[i])
         print(f"chi={chi_tebd} got energies\n", energies)
