@@ -280,11 +280,11 @@ def fill_subspace_matrices_toeplitz(
     for i in range(d):
         for j in range(d):
             if i >= j:
-                h[j, i] = mat_elems[i-j]
-                s[j, i] = overlaps[i-j]
+                h[i, j] = mat_elems[i-j].conj()
+                s[i, j] = overlaps[i-j].conj()
             else:
-                h[j, i] = mat_elems[j-i].conj()
-                s[j, i] = overlaps[j-i].conj()
+                h[i, j] = mat_elems[j-i]
+                s[i, j] = overlaps[j-i]
     return h, s
 
 

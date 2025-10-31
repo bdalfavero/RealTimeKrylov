@@ -56,18 +56,18 @@ def main():
     ev_circuit = trotter_circuit_from_psum(hamiltonian_cirq, tau, steps)
     ev_ckt_transpiled = qiskit.transpile(ev_circuit, basis_gates=["u3", "cx"])
     tebd_bond_dims = dmrg_bond_dims
-    tebd_energies = np.zeros((len(tebd_bond_dims), d-1), dtype=float)
     ptb_state = np.zeros((2 ** len(qs),), dtype=complex)
     idx = (1 << n_elec) - 1
     ptb_state[idx] = 1.0
     r = 1e-2
-    # ref_state = sqrt(1 - r) * exact_ground_state + sqrt(r) * ptb_state
-    ref_state = dmrg_ground_states[20]
-    eta = [1e-12, 1e-12, 1e-12, 1e-12]
+    ref_state = sqrt(1 - r) * exact_ground_state + sqrt(r) * ptb_state
+    # ref_state = dmrg_ground_states[5]
+    eta = [1e-16, 1e-12, 1e-12, 1e-12]
+    tebd_energies = np.zeros((len(tebd_bond_dims), d-1), dtype=float)
     for i, chi_tebd in enumerate(tebd_bond_dims):
         h, s = subspace_matrices(
-            hamiltonian_mpo, ref_state, ev_ckt_transpiled,
-            chi_tebd, d, method="Toeplitz", exact=False
+            ham_matrix, ref_state, ev_ckt_transpiled,
+            chi_tebd, d, method="Toeplitz", exact=True
         )
         energies = energy_vs_d(h, s, method="threshold", eps=eta[i])
         print(f"chi={chi_tebd} got energies\n", energies)

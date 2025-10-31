@@ -43,7 +43,7 @@ def main():
     ptb_state = np.zeros((2 ** len(qs),), dtype=complex)
     idx = (1 << n_elec) - 1
     ptb_state[idx] = 1.0
-    r = 1e-2
+    r = 0.4
     ref_state = sqrt(1 - r) * exact_ground_state + sqrt(r) * ptb_state
 
     overlaps = []
