@@ -72,6 +72,24 @@ def cirq_pauli_sum_to_qiskit_pauli_op(pauli_sum: cirq.PauliSum) -> SparsePauliOp
     return SparsePauliOp(terms, coeffs)
 
 
+def mps_to_vector(mps: MatrixProductState) -> np.ndarray:
+    """Convert an MPS into a normal vector. This assumes each index is a string
+    followed by a number, e.g. three indices 'k0, k1, k2'."""
+
+    def _idx_to_int(idx: str) -> int:
+        digits = [c for c in idx if c in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']]
+        if len(digits) == 0:
+            raise ValueError(f"Index {str} has no digits in it.")
+        return int(''.join(digits))
+    
+    # Contract the MPS into a tensor, then sort the indices. Convert that to a vector.
+    contracted_tensor = mps.contract()
+    sorted_inds = sorted(contracted_tensor.inds, key=_idx_to_int)
+    contracted_tensor.transpose(*sorted_inds, inplace=True)
+    tensor_data = contracted_tensor.data
+    return tensor_data.reshape((tensor_data.size,))
+
+
 def total_number_qubit_operator(n_orbitals: int, use_jw=True) -> of.QubitOperator:
     """Get a Pauli sum representing the total number operator.
     
@@ -347,7 +365,7 @@ def fill_subspace_matrices_vectors(
     return (H, S)
 
 
-def threshold_eigenvalues(h: np.ndarray, s: np.ndarray, eps: float, verbose: bool=False) -> Tuple[np.ndarray, np.ndarray]:
+def threshold_eigenvalues(h: np.ndarray, s: np.ndarray, eps: float, verbose: bool=False) -> Tuple[np.ndarray, np.ndarray, int]:
     """Remove all eigenvalues below a positive threshold eps.
     See Epperly et al. sec. 1.2."""
 
@@ -370,13 +388,13 @@ def threshold_eigenvalues(h: np.ndarray, s: np.ndarray, eps: float, verbose: boo
     # Project h and s into this subspace.
     new_s =  pos_evec_mat.conj().T @ s @ pos_evec_mat
     new_h = pos_evec_mat.conj().T @ h @ pos_evec_mat
-    return new_h, new_s
+    return new_h, new_s, num_kept
 
 
 def energy_vs_d(
     h: np.ndarray, s: np.ndarray,
     method: str = "threshold", **kwargs
-) -> np.ndarray:
+) -> Tuple[np.ndarray, np.ndarray]:
     """Get energy from H, S for each dimension up to the total size d of the subspace."""
 
     assert h.shape == s.shape
@@ -387,16 +405,19 @@ def energy_vs_d(
         assert "eta" in kwargs
 
     energies = []
+    num_kept = []
     for d in range(1, h.shape[0]):
         h_d = h[:d, :d]
         s_d = s[:d, :d]
         if method == "threshold":
-            new_h, new_s = threshold_eigenvalues(h_d, s_d, kwargs["eps"])
+            new_h, new_s, nkept = threshold_eigenvalues(h_d, s_d, kwargs["eps"])
         else:
             new_h = h_d.copy()
             new_s = s_d + kwargs["eta"] * np.eye(s_d.shape[0])
+            nkept = h_d.shape[0]
         eigvals, eigvecs = la.eig(new_h, new_s)
         i_min = np.argmin(eigvals.real)
         # print(eigvecs[:, i_min].conj().T @ eigvecs[:, i_min])
         energies.append(eigvals[i_min].real)
-    return energies
+        num_kept.append(nkept)
+    return np.array(energies), np.array(num_kept)
