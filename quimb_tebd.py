@@ -288,7 +288,7 @@ def fill_subspace_matrices_toeplitz(
     return h, s
 
 
-def fill_subspace_matrices_state(
+def fill_subspace_matrices_mps(
     states: List[MatrixProductState],
     hamiltonian_mpo: MatrixProductOperator
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -345,48 +345,6 @@ def fill_subspace_matrices_vectors(
         S[i, j] = np.vdot(states[i], states[i])
         H[i, j] = np.vdot(states[i], ham @ states[i])
     return (H, S)
-
-
-def subspace_matrices(
-    ham: Union[MatrixProductOperator, np.ndarray],
-    reference_state: Union[MatrixProductState, np.ndarray],
-    ev_circuit: qiskit.QuantumCircuit,
-    max_bond: int,
-    d: int,
-    method: str = "Toeplitz",
-    exact: bool = False
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Get H and S given the reference and the circuit."""
-
-    assert method in ["Toeplitz", "full"]
-
-    if method == "Toeplitz":
-        overlaps = []
-        mat_elems = []
-        for dd in range(d):
-            if exact:
-                mat_elem, overlap = exact_matrix_element_and_overlap(
-                    ham, ev_circuit, reference_state,
-                    dd #, max_bond, backend_callback=None
-                )
-            else:
-                mat_elem, overlap = tebd_matrix_element_and_overlap(
-                    ham, ev_circuit, reference_state,
-                    d, max_bond, None
-                )
-            overlaps.append(overlap)
-            mat_elems.append(mat_elem)
-        # print("overlaps =\n", overlaps)
-        # print("mat_elems =\n", mat_elems)
-        h, s = fill_subspace_matrices_toeplitz(mat_elems, overlaps)
-    else:
-        if exact:
-            states = exact_evolved_states(ev_circuit, reference_state, d)
-            h, s = fill_subspace_matrices_vectors(states, ham)
-        else:
-            states = get_evolved_states(ev_circuit, reference_state, d, max_bond, None)
-            h, s = fill_subspace_matrices_state(states, ham)
-    return (h, s)
 
 
 def threshold_eigenvalues(h: np.ndarray, s: np.ndarray, eps: float, verbose: bool=False) -> Tuple[np.ndarray, np.ndarray]:
