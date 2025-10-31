@@ -2,7 +2,7 @@ import openfermion as of
 from openfermionpyscf import run_pyscf
 from quimb_tebd import (
     pauli_sum_to_mpo, get_drmg_ground_state, trotter_circuit_from_psum,
-    subspace_matrices, energy_vs_d
+    energy_vs_d, get_evolved_states, fill_subspace_matrices_mps
 )
 
 def main():
@@ -11,7 +11,7 @@ def main():
     n_elec = 2
     geometry = of.chem.geometry_from_pubchem(molec)
     multiplicity = 1
-    dmrg_max_bond = 20
+    dmrg_max_bond = 5 
     tebd_max_bond = 40
     tau = 1.0
     steps = 10
@@ -22,8 +22,9 @@ def main():
     molecule = of.chem.MolecularData(
         geometry, basis, multiplicity
     )
-    molecule = run_pyscf(molecule, run_scf=1)
+    molecule = run_pyscf(molecule, run_scf=1, run_fci=1)
     print(f"HF energy:", molecule.hf_energy)
+    print(f"FCI energy:", molecule.fci_energy)
     hamiltonian = molecule.get_molecular_hamiltonian()
     hamiltonian_qubop = of.transforms.jordan_wigner(hamiltonian)
     hamiltonian_psum = of.transforms.qubit_operator_to_pauli_sum(hamiltonian_qubop)
@@ -36,8 +37,9 @@ def main():
 
     # Do Krylov with the DMRG reference state.
     ev_circuit = trotter_circuit_from_psum(hamiltonian_psum, tau, steps)
-    h, s = subspace_matrices(hamiltonian_mpo, ground_state, ev_circuit, tebd_max_bond, d)
-    energies = energy_vs_d(h, s, eps)
+    states = get_evolved_states(ev_circuit, ground_state, d, tebd_max_bond, None)
+    h, s = fill_subspace_matrices_mps(states, hamiltonian_mpo)
+    energies = energy_vs_d(h, s, method="threshold", eps=eps)
     print("Krylov energies:\n", energies)
 
 
