@@ -360,8 +360,8 @@ def fill_subspace_matrices_vectors(
     for i in range(N):
         # S[i, i] = states[i].H @ states[i]
         # H[i, i] = states[i].H @ hamiltonian_mpo.apply(states[i])
-        S[i, j] = np.vdot(states[i], states[i])
-        H[i, j] = np.vdot(states[i], ham @ states[i])
+        S[i, i] = np.vdot(states[i], states[i])
+        H[i, i] = np.vdot(states[i], ham @ states[i])
     return (H, S)
 
 
@@ -384,6 +384,8 @@ def threshold_eigenvalues(h: np.ndarray, s: np.ndarray, eps: float, verbose: boo
             num_kept += 1
     if verbose:
         print(f"Kept {num_kept} eigenvalues out of {len(evals)}.")
+    if num_kept == 0:
+        raise RuntimeError(f"No eigenvalues kept. Eigenvalues of S are\n{evals}")
     pos_evec_mat = np.vstack(positive_evecs).T
     # Project h and s into this subspace.
     new_s =  pos_evec_mat.conj().T @ s @ pos_evec_mat
