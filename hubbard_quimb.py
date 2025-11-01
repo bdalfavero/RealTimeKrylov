@@ -8,7 +8,8 @@ import qiskit
 from quimb_tebd import (
     pauli_sum_to_mpo, get_drmg_ground_state, trotter_circuit_from_psum,
     energy_vs_d, total_number_qubit_operator, get_evolved_states,
-    fill_subspace_matrices_mps
+    fill_subspace_matrices_mps, mps_to_vector, exact_evolved_states,
+    fill_subspace_matrices_vectors
 )
 
 def main():
@@ -63,9 +64,15 @@ def main():
     for i, chi_tebd in enumerate(tebd_bond_dims):
         states = get_evolved_states(ev_ckt_transpiled, ref_state, d, chi_tebd, None)
         h, s = fill_subspace_matrices_mps(states, hamiltonian_mpo)
-        energies = energy_vs_d(h, s, method="threshold", eps=eta[i])
+        energies, _ = energy_vs_d(h, s, method="threshold", eps=eta[i])
         print(f"chi={chi_tebd} got energies\n", energies)
         tebd_energies[i, :] = np.array(energies)
+    
+    # Krylov with unitary evolution (unitary from circuit)
+    ref_vector = mps_to_vector(ref_state)
+    states = exact_evolved_states(ev_ckt_transpiled, ref_vector, d)
+    h_u, s_u = fill_subspace_matrices_vectors(states, ham_aug_sparse)
+    energies_u, _ = energy_vs_d(h_u, s_u, method="threshold", eps=eps)
     
     f = h5py.File("data/hubbard_tebd.hdf5", "w")
     f.create_dataset("l", data=l)
@@ -76,12 +83,13 @@ def main():
     f.create_dataset("tau", data=tau)
     f.create_dataset("steps", data=steps)
     f.create_dataset("d", data=d)
-    # f.create_dataset("eps", data=eps)
+    f.create_dataset("eps", data=eps)
     f.create_dataset("exact_energy", data=energy_exact)
     f.create_dataset("dmrg_bond_dims", data=dmrg_bond_dims)
     f.create_dataset("dmrg_energies", data=dmrg_energies)
     f.create_dataset("tebd_bond_dims", data=tebd_bond_dims)
     f.create_dataset("tebd_energies", data=tebd_energies)
+    f.create_dataset("energies_u", data=energies_u)
     f.close()
 
 
