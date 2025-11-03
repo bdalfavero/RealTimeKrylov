@@ -17,7 +17,7 @@ def main():
     geometry = of.chem.geometry_from_pubchem(molec)
     multiplicity = 1
     dmrg_max_bond = 5 
-    tebd_max_bond = 200
+    tebd_max_bond = 500
     steps = 10
     eps = 1e-12
     d = 15
@@ -38,6 +38,7 @@ def main():
 
     ham_norm = norm(ham_sparse)
     tau = np.pi / ham_norm
+    print(f"tau = {tau:4.5e}")
 
     # Run DMRG
     ground_state, energy, number = get_drmg_ground_state(hamiltonian_mpo, n_elec, dmrg_max_bond)
