@@ -85,6 +85,7 @@ def mps_to_vector(mps: MatrixProductState) -> np.ndarray:
     # Contract the MPS into a tensor, then sort the indices. Convert that to a vector.
     contracted_tensor = mps.contract()
     sorted_inds = sorted(contracted_tensor.inds, key=_idx_to_int)
+    print(f"sorted_inds = {sorted_inds}")
     contracted_tensor.transpose(*sorted_inds, inplace=True)
     tensor_data = contracted_tensor.data
     return tensor_data.reshape((tensor_data.size,))

@@ -18,6 +18,7 @@ def main():
     multiplicity = 1
     dmrg_max_bond = 1
     tebd_max_bond = 500
+    mpo_max_bond = 500
     steps = 10
     eps = 1e-12
     d = 15
@@ -34,7 +35,7 @@ def main():
     hamiltonian_psum = of.transforms.qubit_operator_to_pauli_sum(hamiltonian_qubop)
     ham_sparse = of.linalg.get_sparse_operator(hamiltonian_qubop)
     qs = hamiltonian_psum.qubits
-    hamiltonian_mpo = pauli_sum_to_mpo(hamiltonian_psum, qs, dmrg_max_bond)
+    hamiltonian_mpo = pauli_sum_to_mpo(hamiltonian_psum, qs, mpo_max_bond)
 
     ham_norm = norm(ham_sparse)
     tau = np.pi / ham_norm
@@ -46,7 +47,7 @@ def main():
 
     # Do TEBD Krylov with the DMRG reference state.
     ev_circuit = trotter_circuit_from_psum(hamiltonian_psum, tau, steps)
-    states = get_evolved_states(ev_circuit, ground_state, d, tebd_max_bond, None)
+    states = get_evolved_states(ev_circuit, ground_state.copy(), d, tebd_max_bond, None)
     bond_sizes = []
     for state in states:
         bond_sizes.append(state.bond_sizes())
@@ -56,6 +57,8 @@ def main():
     # Do Krylov with the unitary of the circuit and a vector derived from the DMRG ground state.
     gs_vector = mps_to_vector(ground_state)
     print("Norm of vector version of ground state:", sp.linalg.norm(gs_vector))
+    gs_vector_energy = np.vdot(gs_vector, ham_sparse @ gs_vector)
+    print(f"Vector version of ground state has energy {gs_vector_energy}")
     u_states = exact_evolved_states(ev_circuit, gs_vector, d)
     h_u, s_u = fill_subspace_matrices_vectors(u_states, ham_sparse)
     # breakpoint()
