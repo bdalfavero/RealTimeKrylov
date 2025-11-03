@@ -16,7 +16,7 @@ def main():
     n_elec = 2
     geometry = of.chem.geometry_from_pubchem(molec)
     multiplicity = 1
-    dmrg_max_bond = 1
+    dmrg_max_bond = 2
     tebd_max_bond = 500
     mpo_max_bond = 500
     steps = 10
