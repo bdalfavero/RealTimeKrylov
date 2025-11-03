@@ -182,20 +182,30 @@ def get_evolved_states(
             evolved_mps = reference_mps.copy()
         else:
             # Make a circuit with d repetitions of the evolution circuit.
-            nq = evolution_circuit.num_qubits
-            total_circuit = qiskit.QuantumCircuit(nq)
-            for _ in range(i):
-                total_circuit = total_circuit.compose(evolution_circuit)
+            # nq = evolution_circuit.num_qubits
+            # total_circuit = qiskit.QuantumCircuit(nq)
+            # for _ in range(i):
+            #     total_circuit = total_circuit.compose(evolution_circuit)
             # Convert the circuit to quimb format.
-            qasm_str = dumps(total_circuit)
+            # qasm_str = dumps(total_circuit)
+            # if backend_callback is not None:
+            #     circuit_mps = qtn.circuit.CircuitMPS.from_openqasm2_str(
+            #         qasm_str, psi0=reference_mps, max_bond=max_circuit_bond, progbar=False,
+            #         to_backend=backend_callback
+            #     )
+            # else:
+            #     circuit_mps = qtn.circuit.CircuitMPS.from_openqasm2_str(
+            #         qasm_str, psi0=reference_mps, max_bond=max_circuit_bond, progbar=False
+            #     )
+            qasm_str = dumps(evolution_circuit)
             if backend_callback is not None:
                 circuit_mps = qtn.circuit.CircuitMPS.from_openqasm2_str(
-                    qasm_str, psi0=reference_mps, max_bond=max_circuit_bond, progbar=False,
+                    qasm_str, psi0=evolved_mps, max_bond=max_circuit_bond, progbar=False,
                     to_backend=backend_callback
                 )
             else:
                 circuit_mps = qtn.circuit.CircuitMPS.from_openqasm2_str(
-                    qasm_str, psi0=reference_mps, max_bond=max_circuit_bond, progbar=False
+                    qasm_str, psi0=evolved_mps, max_bond=max_circuit_bond, progbar=False
                 )
             evolved_mps = circuit_mps.psi
         evolved_mps.normalize()

@@ -61,9 +61,13 @@ def main():
     ref_state = dmrg_ground_states[5]
     eta = [1e-16, 1e-12, 1e-12, 1e-12]
     tebd_energies = np.zeros((len(tebd_bond_dims), d-1), dtype=float)
+    all_tebd_h = np.zeros((len(tebd_bond_dims), d, d), dtype=complex)
+    all_tebd_s = np.zeros((len(tebd_bond_dims), d, d), dtype=complex)
     for i, chi_tebd in enumerate(tebd_bond_dims):
         states = get_evolved_states(ev_ckt_transpiled, ref_state, d, chi_tebd, None)
         h, s = fill_subspace_matrices_mps(states, hamiltonian_mpo)
+        all_tebd_h[i, :, :] = h.copy()
+        all_tebd_s[i, :, :] = s.copy()
         energies, _ = energy_vs_d(h, s, method="threshold", eps=eta[i])
         print(f"chi={chi_tebd} got energies\n", energies)
         tebd_energies[i, :] = np.array(energies)
@@ -90,6 +94,10 @@ def main():
     f.create_dataset("tebd_bond_dims", data=tebd_bond_dims)
     f.create_dataset("tebd_energies", data=tebd_energies)
     f.create_dataset("energies_u", data=energies_u)
+    f.create_dataset("all_tebd_h", data=all_tebd_h)
+    f.create_dataset("all_tebd_s", data=all_tebd_s)
+    f.create_dataset("h_u", data=h_u)
+    f.create_dataset("s_u", data=s_u)
     f.close()
 
 
