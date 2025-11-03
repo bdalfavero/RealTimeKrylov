@@ -63,8 +63,11 @@ def main():
     tebd_energies = np.zeros((len(tebd_bond_dims), d-1), dtype=float)
     all_tebd_h = np.zeros((len(tebd_bond_dims), d, d), dtype=complex)
     all_tebd_s = np.zeros((len(tebd_bond_dims), d, d), dtype=complex)
+    bond_sizes = np.zeros((len(tebd_bond_dims), d, len(hamiltonian_mpo.tensors) - 1), dtype=int)
     for i, chi_tebd in enumerate(tebd_bond_dims):
         states = get_evolved_states(ev_ckt_transpiled, ref_state, d, chi_tebd, None)
+        for j, state in enumerate(states):
+            bond_sizes[i, j, :] = state.bond_sizes()
         h, s = fill_subspace_matrices_mps(states, hamiltonian_mpo)
         all_tebd_h[i, :, :] = h.copy()
         all_tebd_s[i, :, :] = s.copy()
@@ -98,6 +101,7 @@ def main():
     f.create_dataset("all_tebd_s", data=all_tebd_s)
     f.create_dataset("h_u", data=h_u)
     f.create_dataset("s_u", data=s_u)
+    f.create_dataset("bond_sizes", data=bond_sizes)
     f.close()
 
 

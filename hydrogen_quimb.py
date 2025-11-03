@@ -47,6 +47,9 @@ def main():
     # Do TEBD Krylov with the DMRG reference state.
     ev_circuit = trotter_circuit_from_psum(hamiltonian_psum, tau, steps)
     states = get_evolved_states(ev_circuit, ground_state, d, tebd_max_bond, None)
+    bond_sizes = []
+    for state in states:
+        bond_sizes.append(state.bond_sizes())
     h, s = fill_subspace_matrices_mps(states, hamiltonian_mpo)
     energies, num_kept = energy_vs_d(h, s, method="threshold", eps=eps)
 
@@ -70,6 +73,7 @@ def main():
     f.create_dataset("hf_energy", data=molecule.hf_energy)
     f.create_dataset("fci_energy", data=molecule.fci_energy)
     f.create_dataset("dmrg_energy", data=energy)
+    f.create_dataset("bond_sizes", data=np.array(bond_sizes))
     f.close()
 
 
