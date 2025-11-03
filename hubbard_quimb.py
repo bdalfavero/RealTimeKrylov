@@ -3,6 +3,7 @@ import h5py
 from math import sqrt
 import numpy as np
 from scipy.sparse.linalg import eigsh
+import scipy.linalg as la
 import openfermion as of
 import qiskit
 from quimb_tebd import (
@@ -21,7 +22,7 @@ def main():
     tau = 0.2
     steps = 3
     d = 15
-    eps = 1e-8
+    eps = 1e-12
     alpha = 10.
 
     hamiltonian = of.hamiltonians.fermi_hubbard(l, l, t, u)
@@ -51,7 +52,7 @@ def main():
         )
         print(f"For chi={chi_dmrg}, energy={energy} and N={occupation}")
         ground_state.normalize()
-        dmrg_ground_states[chi_dmrg] = ground_state
+        dmrg_ground_states[chi_dmrg] = ground_state.copy()
         dmrg_energies[i] = energy
 
     # TEBD Krylov energies
@@ -65,7 +66,7 @@ def main():
     all_tebd_s = np.zeros((len(tebd_bond_dims), d, d), dtype=complex)
     bond_sizes = np.zeros((len(tebd_bond_dims), d, len(hamiltonian_mpo.tensors) - 1), dtype=int)
     for i, chi_tebd in enumerate(tebd_bond_dims):
-        states = get_evolved_states(ev_ckt_transpiled, ref_state, d, chi_tebd, None)
+        states = get_evolved_states(ev_ckt_transpiled, ref_state.copy(), d, chi_tebd, None)
         for j, state in enumerate(states):
             bond_sizes[i, j, :] = state.bond_sizes()
         h, s = fill_subspace_matrices_mps(states, hamiltonian_mpo)
@@ -77,6 +78,10 @@ def main():
     
     # Krylov with unitary evolution (unitary from circuit)
     ref_vector = mps_to_vector(ref_state)
+    ref_vector_energy = np.vdot(ref_vector, ham_aug_sparse @ ref_vector)
+    ref_vector_energy_error = np.abs(ref_vector_energy - dmrg_energies[0])
+    print(f"Reference state has norm {la.norm(ref_vector)}")
+    print(f"Reference state vector has energy {ref_vector_energy}, error {ref_vector_energy_error}")
     states = exact_evolved_states(ev_ckt_transpiled, ref_vector, d)
     h_u, s_u = fill_subspace_matrices_vectors(states, ham_aug_sparse)
     energies_u, _ = energy_vs_d(h_u, s_u, method="threshold", eps=eps)

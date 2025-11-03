@@ -227,8 +227,8 @@ def exact_evolved_states(
     u = qiskit.quantum_info.Operator(evolution_circuit).data
     evolved_state = reference_state.copy()
     for _ in range(d):
-        evolved_state = u @ evolved_state
         states.append(evolved_state.copy())
+        evolved_state = u @ evolved_state
     return states
 
 
