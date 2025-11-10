@@ -1,3 +1,4 @@
+from copy import deepcopy
 import h5py
 import numpy as np
 import scipy as sp
@@ -16,8 +17,8 @@ def main():
     n_elec = 2
     geometry = of.chem.geometry_from_pubchem(molec)
     multiplicity = 1
-    dmrg_max_bond = [1, 2]
-    tebd_max_bond = [1, 2, 5]
+    dmrg_max_bond = [1, 2, 5]
+    tebd_max_bond = deepcopy(dmrg_max_bond)
     mpo_max_bond = 500
     steps = 10
     eps = 1e-12
