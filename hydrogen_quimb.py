@@ -58,9 +58,12 @@ def main():
     tebd_all_s = np.zeros((len(tebd_max_bond), d, d), dtype=complex)
     bond_sizes = np.zeros((len(tebd_max_bond), d, len(hamiltonian_mpo.tensors)-1), dtype=int)
     for i, chi_tebd in enumerate(tebd_max_bond):
+        print(f"i={i}")
         states = get_evolved_states(ev_circuit, ground_states[0].copy(), d, chi_tebd, None)
         for j, state in enumerate(states):
             bond_sizes[i, j, :] = state.bond_sizes()
+            fidelity = abs(state.H @ states[0]) ** 2
+            print(f"j={j} fidelity={fidelity:4.5e}")
         h, s = fill_subspace_matrices_mps(states, hamiltonian_mpo)
         energies, num_kept = energy_vs_d(h, s, method="threshold", eps=eps)
         tebd_energies[i, :] = energies
